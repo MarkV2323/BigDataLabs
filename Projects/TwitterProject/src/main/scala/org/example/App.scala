@@ -30,40 +30,58 @@ object App {
       .config(conf)
       .getOrCreate()
 
-
     // Get the input and output file names.
     val inputFile: String = args(0)
     val outputFile: String = args(1)
 
+    // Stores top 20 keywords found in it's own file.
+    val top20KW: String = "top_20_keywords.csv"
+
     // tmp file for keywords
     val tmp_clean_tweets = "tmp_clean_tweets"
 
-    // Begin operations on file.
+    // Begin operations.
     try {
+      // Load JSON data into a dataframe.
+      println("Loading file: ", inputFile)
       val tweetDF = spark.read.option("inferSchema", "true").json(inputFile)
 
-      // CREATING A DF FOR THE NESTED DATASTRUCT "entitites.hashtags.text" RENAMED COLLUMNS TO SOLVE ISSUES WITH WRITING TO FILE
-      val hashDF = tweetDF.select( "id", "entities.hashtags.text").withColumnRenamed("text", "hashtags")
+      // Create new dataframe based on relevant attributes.
+      // Rename columns to avoid confusion.
+      val hashDF = tweetDF
+        .select( "id", "entities.hashtags.text")
+        .withColumnRenamed("text", "hashtags")
         .withColumnRenamed("id", "id_2")
 
-      // CREATED MAIN DF WITH ALL NEEDED COLUMNS, EXCEPT "entitites.hashtags.text", NEEDED TO BE FLATTENED
-      val cleanDF = tweetDF.select("id","text", "user.description", "retweet_count", "reply_count", "quoted_status_id")
+      // Create new dataframe based on all relevant attributes to avoid extra complexity.
+      // Does not include "entities.hashtags.text".
+      val cleanDF = tweetDF
+        .select("id","text", "user.description", "retweet_count", "reply_count", "quoted_status_id")
 
-      // JOINING THE TWO TABLES, CREATED A JOIN CONDITION, LEFT JOIN, AND REMOVED THE DUPLICATE COLUMN FROM JOIN CONDITION
+      // Create new dataframe based on left joining hashDF and cleanDF based on join condition.
       val joinCondition = cleanDF.col("id") === hashDF.col("id_2")
       val joinedDF = cleanDF.join(hashDF, joinCondition)
-      val finalDF = joinedDF.drop("id_2").withColumnRenamed("description", "user_description")
-      finalDF.write.json(tmp_clean_tweets)
 
+      // Create new dataframe based on dropping duplicate column, and renaming description attribute.
+      val analysisDF = joinedDF
+        .drop("id_2")
+        .withColumnRenamed("description", "user_description")
 
+      // Uses exploded method on "hashtags" attribute and counts each instance of "hashtags"
+      val explodedDF = analysisDF
+        .select(explode(analysisDF.col("hashtags")))
+        .withColumnRenamed("col", "hashtags")
 
-      // CREATING ANOTHER DATAFRAME FROM JSON FILES CREATED BY LAST QUERY
-      val analysisDF = spark.read.option("inferSchema", "true").json(tmp_clean_tweets)
+      // Create new dataframe based on counting each instance of "hashtags", limiting the top 20.
+      val top20DF = explodedDF
+        .groupBy("hashtags")
+        .count()
+        .orderBy(desc("count"))
+        .limit(20).drop("count")
 
-      // EXPLODING THE "hashtags" AND COUNTING EACH INSTANCE OF HASHTAG
-      val exploded = analysisDF.select(explode(analysisDF.col("hashtags"))).withColumnRenamed("col", "hashtags")
-      val explodedCount = exploded.groupBy("hashtags").count().orderBy(desc("count")).limit(20).drop("count")
-      explodedCount.write.csv("top_20_tweets")
+      // Write top 20 keywords to file.
+      top20DF.write.csv(top20KW)
+
     } finally {
       // end the session because we are done.
       spark.stop()

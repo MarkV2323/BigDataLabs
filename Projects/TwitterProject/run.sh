@@ -1,5 +1,5 @@
 # remove previous tmp outputs and final output
-rm -rf tmp_clean_tweets
+bash cleanup.sh
 
 # compile
 mvn package
@@ -8,5 +8,5 @@ mvn package
 spark-submit --class org.example.App \
 --master "local[*]" \
 target/TwitterProject-1.0-SNAPSHOT.jar \
-file:///mnt/c/Users/Mark/Documents/TwitterProject/tweets_1k.json \
-file:///mnt/c/Users/Mark/Documents/TwitterProject/output.tsv
+/mnt/c/Users/Mark/Documents/bigDataPlayground/Projects/TwitterProject/tweets_1k.json \
+/mnt/c/Users/Mark/Documents/bigDataPlayground/Projects/TwitterProject/output.csv
