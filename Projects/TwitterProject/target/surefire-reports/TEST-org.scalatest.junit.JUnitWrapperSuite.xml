@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <testsuite 
-errors="0" failures="0" hostname="DESKTOP-MOOK" name="org.scalatest.junit.JUnitWrapperSuite" tests="0" time="0.123" timestamp="2022-07-23T19:49:49">
+errors="0" failures="0" hostname="DESKTOP-MOOK" name="org.scalatest.junit.JUnitWrapperSuite" tests="0" time="0.167" timestamp="2022-07-23T21:17:36">
   <properties>
     <property name="java.runtime.name" value="Java(TM) SE Runtime Environment">
     </property>
